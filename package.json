@@ -6,7 +6,7 @@
     "url": "https://github.com/webXcerpt/openCPQ-example-optical-transport"
   },
   "scripts": {
-    "dev-server": "node_modules/.bin/webpack-dev-server --progress --watch",
+    "dev-server": "webpack-dev-server --progress --watch",
     "build": "node_modules/.bin/webpack --progress --production",
     "deploy": "node_modules/.bin/gulp ftp"
   },

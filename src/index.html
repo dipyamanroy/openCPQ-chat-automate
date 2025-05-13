@@ -1,20 +1,458 @@
-<!DOCTYPE html>
-<html manifest="manifest.appcache" style="height: 100%; margin: 0px;">
+<!doctype html>
+<html manifest="manifest.appcache" style="height: 100%; margin: 0px">
+
 <head>
-  <meta charset="UTF-8">
-  <title>openCPQ Demo Optical Transport</title>
+    <meta charset="UTF-8" />
+    <title>openCPQ Demo Optical Transport</title>
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: linear-gradient(to bottom right, #f8f9fa, #e9ecef);
+        }
+
+        #mnt {
+            height: 100%;
+        }
+
+        h1.loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid black;
+            padding: 10px;
+            background-color: white;
+        }
+
+        /* Toggle Button */
+        #chatToggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #0d6efd;
+            color: white;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            cursor: pointer;
+            z-index: 10000;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            transition: background 0.3s ease;
+        }
+
+        #chatToggle:hover {
+            background: #0b5ed7;
+        }
+
+        /* Chat Panel */
+        #chatbot {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 370px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 9999;
+            animation: slideIn 0.25s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-header {
+            background-color: #f8f9fa;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 1.6rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .chat-header button {
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            color: #6c757d;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .chat-header button:hover {
+            color: #495057;
+        }
+
+        #chatlog {
+            padding: 16px;
+            background: #f1f3f5;
+            flex-grow: 1;
+            overflow-y: auto;
+            font-size: 1.4rem;
+            max-height: 320px;
+        }
+
+        .chat-message {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .chat-message.user {
+            align-items: flex-end;
+        }
+
+        .chat-message .bubble {
+            padding: 10px 12px;
+            border-radius: 12px;
+            max-width: 85%;
+            background-color: #f1f3f5;
+            font-size: 1.5rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .chat-message.user .bubble {
+            background-color: #d0ebff;
+            color: #084298;
+            border-top-right-radius: 0;
+        }
+
+        .chat-message.ai .bubble {
+            background-color: #e2e2e2;
+            color: #212529;
+            border-top-left-radius: 0;
+        }
+
+        .chat-message.error .bubble {
+            background-color: #edbbbb;
+            color: #212529;
+            border-top-left-radius: 0;
+        }
+
+
+        .timestamp {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 4px;
+            margin-left: 8px;
+            margin-right: 8px;
+        }
+
+
+        .input-container {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #dee2e6;
+            background: #ffffff;
+        }
+
+        #userInput {
+            flex: 1;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 1.5rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #userInput:focus {
+            border-color: #0d6efd;
+        }
+
+        .input-container button {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            margin-left: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .input-container button:hover {
+            background-color: #0b5ed7;
+        }
+
+        .example-prompts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 6px 0;
+        }
+
+        .example-prompts button {
+            background-color: #e2e6ea;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 6px;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .example-prompts button:hover {
+            background-color: #ced4da;
+        }
+    </style>
 </head>
 
-<body style="height: 100%; margin: 0px;">
-    <div id="mnt" style="height: 100%;">
-        <h1 style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 1px solid black; padding: 10px;">
-            Loading configurator
-            <script>
-                document.write(document.URL)
-            </script>
-            ...
+<body>
+    <div id="mnt">
+        <h1 class="loading">Loading configurator<br />
+            <script>document.write(document.URL);</script>...
         </h1>
     </div>
+
     <script src="bundle.js"></script>
+
+    <div id="chatToggle" onclick="toggleChatbot()">✨</div>
+
+    <div id="chatbot">
+        <div class="chat-header">
+            <span>🌊⛰️🫵 AI Assistant</span>
+            <button onclick="toggleChatbot()">✕</button>
+        </div>
+        <div id="chatlog" class="chat-log"></div>
+        <div class="input-container">
+            <input type="text" id="userInput" placeholder="Ask me anything..." />
+            <button onclick="handleUserQuery()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let structuredData = {};
+        const examplePrompts = [
+            "Can you help me configure a 100G optical channel?",
+            "Show me available transponder options.",
+            "What’s the power requirement for this setup?",
+            "Suggest a cost-optimized design."
+        ];
+
+        function toggleChatbot() {
+            const chat = document.getElementById("chatbot");
+            const toggle = document.getElementById("chatToggle");
+
+            if (chat.style.display === "none") {
+                chat.style.display = "flex";
+                toggle.style.display = "none";
+                setTimeout(() => {
+                    document.getElementById("userInput").focus();
+                }, 100);
+                showExamplePromptsIfEmpty();
+            } else {
+                chat.style.display = "none";
+                toggle.style.display = "flex";
+            }
+        }
+
+        function showExamplePromptsIfEmpty() {
+            const chatlog = document.getElementById("chatlog");
+            if (chatlog.innerHTML.trim() === "") {
+                const promptHTML = examplePrompts.map(text => {
+                    return `<button onclick="sendExamplePrompt('${text.replace(/'/g, "\\'")}')">${text}</button>`;
+                }).join('');
+                chatlog.innerHTML = `
+                    <div class="chat-message ai">
+                        <div class="bubble">
+                            <div style="text-align: center;"><strong>🪄 Get started</strong></div>
+                            <div class="example-prompts">${promptHTML}</div>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        function sendExamplePrompt(prompt) {
+            document.getElementById("userInput").value = prompt;
+            handleUserQuery();
+        }
+
+        function collectStructuredData() {
+            structuredData = [];  // Collecting data for both racks and other form elements
+            let currentRack = null;   // Track the current rack
+            let currentSlotGroup = null;  // Track the current slot group
+
+            // Helper to extract dropdown selected value
+            function getDropdownValue(selectEl) {
+                const span = selectEl.querySelector('button.dropdown-toggle span');
+                return span ? span.textContent.trim() : '';
+            }
+
+            // Helper to get labels for form elements
+            function getLabel(el) {
+                let label = '';
+                let parent = el.closest('.labeled-data');
+                if (parent) {
+                    let labelEl = parent.previousElementSibling;
+                    if (labelEl && labelEl.classList.contains('labeled-label')) {
+                        label = labelEl.textContent.trim();
+                    }
+                }
+                if (!label) label = el.getAttribute('aria-label') || el.getAttribute('placeholder') || '';
+                return label;
+            }
+
+            // Traverse the entire document linearly
+            const allElements = document.querySelectorAll('div, .select-select, input[type="checkbox"], input[type="text"]');
+            allElements.forEach(el => {
+                // New Rack if we see "Uninterruptible Power Supply" checkbox
+                if (el.tagName === 'INPUT' && el.type === 'checkbox' && el.closest('.labeled-data')?.previousElementSibling?.textContent.trim() === 'Uninterruptible Power Supply') {
+                    // Start a new rack
+                    currentRack = {
+                        UPS: { Checked: el.checked },
+                        SlotGroups: []
+                    };
+                    structuredData.push(currentRack);
+                    currentSlotGroup = null; // reset current slot group
+                }
+
+                // New SlotGroup if we find "Optical Switch" dropdown
+                else if (el.classList.contains('select-select') && getDropdownValue(el).includes('Optical Switch')) {
+                    if (!currentRack) return; // Must be within a rack
+
+                    currentSlotGroup = {
+                        Product: getDropdownValue(el),
+                        Slots: {}
+                    };
+                    currentRack.SlotGroups.push(currentSlotGroup);
+                }
+
+                // If we're inside a SlotGroup, collect following "unequipped" dropdowns as slots
+                else if (currentSlotGroup && el.classList.contains('select-select') && getDropdownValue(el) === 'unequipped') {
+                    const slotCount = Object.keys(currentSlotGroup.Slots).length + 1;
+                    currentSlotGroup.Slots[`Slot ${slotCount}`] = 'unequipped';
+                }
+
+                // Collect dropdowns (non-rack related)
+                else if (el.classList.contains('select-select')) {
+                    let btn = el.querySelector('button.dropdown-toggle');
+                    if (!btn) return;
+
+                    let label = getLabel(el) || btn.textContent.trim().split('\n')[0];
+                    let selected = btn.querySelector('span') ? btn.querySelector('span').textContent.trim() : '';
+                    let options = new Set();
+                    el.querySelectorAll('ul.dropdown-menu li.select-option a').forEach(a => {
+                        options.add(a.textContent.trim());
+                    });
+                    structuredData[label] = {
+                        SelectedOption: selected,
+                        OtherOptions: Array.from(options)
+                    };
+                }
+
+                // Collect text inputs (non-rack related)
+                else if (el.tagName === 'INPUT' && el.type === 'text') {
+                    let label = getLabel(el);
+                    if (!label) label = el.getAttribute('placeholder') || '';
+                    let value = el.value || el.getAttribute('placeholder') || '';
+                    structuredData[label] = {
+                        Value: value
+                    };
+                }
+
+                // Collect checkboxes (non-rack related)
+                else if (el.tagName === 'INPUT' && el.type === 'checkbox') {
+                    let label = getLabel(el);
+                    let checked = el.checked;
+                    structuredData[label] = {
+                        Checked: checked
+                    };
+                }
+            });
+
+            return structuredData;
+        }
+
+
+
+        document.addEventListener("DOMContentLoaded", collectStructuredData);
+        document.addEventListener("change", collectStructuredData);
+        document.addEventListener("click", (e) => {
+            if (e.target.closest("button.dropdown-toggle") || e.target.matches("li a")) {
+                setTimeout(collectStructuredData, 100);
+            }
+        });
+
+        const observer = new MutationObserver(() => {
+            console.log(structuredData)
+            clearTimeout(observer.debounceTimeout);
+            observer.debounceTimeout = setTimeout(() => {
+                collectStructuredData();
+            }, 200);
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            characterData: true
+        });
+
+        async function handleUserQuery() {
+            collectStructuredData();
+            const inputElem = document.getElementById("userInput");
+            const input = inputElem.value.trim();
+            if (!input) return;
+
+            const chatlog = document.getElementById("chatlog");
+            chatlog.innerHTML += `
+                <div class="chat-message user">
+                    <div class="bubble"><strong>You:</strong> ${input}</div>
+                    <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>`;
+            inputElem.value = "";
+
+            try {
+                const response = await fetch("https://t0md0m3g-3000.inc1.devtunnels.ms/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        userMessage: input,
+                        context: structuredData,
+                    }),
+                });
+
+                const data = await response.json();
+                chatlog.innerHTML += `
+                    <div class="chat-message ai">
+                        <div class="bubble"><strong>AI-CPQ:</strong><pre>${JSON.stringify(data, null, 2)}</pre></div>
+                        <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>`;
+                chatlog.scrollTop = chatlog.scrollHeight;
+            } catch (err) {
+                chatlog.innerHTML += `
+                    <div class="chat-message error">
+                        <div class="bubble"><strong>Error: </strong>${err.message}</div>
+                        <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>`;
+                chatlog.scrollTop = chatlog.scrollHeight;
+            }
+        }
+    </script>
 </body>
+
 </html>
