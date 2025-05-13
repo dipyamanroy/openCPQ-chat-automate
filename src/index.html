@@ -292,17 +292,17 @@
         }
 
         function collectStructuredData() {
-            structuredData = [];  // Collecting data for both racks and other form elements
-            let currentRack = null;   // Track the current rack
-            let currentSlotGroup = null;  // Track the current slot group
+            structuredData = {};  // Reset as an object
 
-            // Helper to extract dropdown selected value
+            let rackCounter = 0;
+            let currentRackKey = '';
+            let currentSlotGroup = null;
+
             function getDropdownValue(selectEl) {
                 const span = selectEl.querySelector('button.dropdown-toggle span');
                 return span ? span.textContent.trim() : '';
             }
 
-            // Helper to get labels for form elements
             function getLabel(el) {
                 let label = '';
                 let parent = el.closest('.labeled-data');
@@ -316,38 +316,39 @@
                 return label;
             }
 
-            // Traverse the entire document linearly
             const allElements = document.querySelectorAll('div, .select-select, input[type="checkbox"], input[type="text"]');
+
             allElements.forEach(el => {
-                // New Rack if we see "Uninterruptible Power Supply" checkbox
-                if (el.tagName === 'INPUT' && el.type === 'checkbox' && el.closest('.labeled-data')?.previousElementSibling?.textContent.trim() === 'Uninterruptible Power Supply') {
-                    // Start a new rack
-                    currentRack = {
+                // New Rack
+                if (el.tagName === 'INPUT' && el.type === 'checkbox' &&
+                    el.closest('.labeled-data')?.previousElementSibling?.textContent.trim() === 'Uninterruptible Power Supply') {
+
+                    rackCounter++;
+                    currentRackKey = `Rack ${rackCounter}`;
+                    structuredData[currentRackKey] = {
                         UPS: { Checked: el.checked },
                         SlotGroups: []
                     };
-                    structuredData.push(currentRack);
-                    currentSlotGroup = null; // reset current slot group
+                    currentSlotGroup = null;
                 }
 
-                // New SlotGroup if we find "Optical Switch" dropdown
+                // New Slot Group
                 else if (el.classList.contains('select-select') && getDropdownValue(el).includes('Optical Switch')) {
-                    if (!currentRack) return; // Must be within a rack
-
+                    if (!currentRackKey) return;
                     currentSlotGroup = {
                         Product: getDropdownValue(el),
                         Slots: {}
                     };
-                    currentRack.SlotGroups.push(currentSlotGroup);
+                    structuredData[currentRackKey].SlotGroups.push(currentSlotGroup);
                 }
 
-                // If we're inside a SlotGroup, collect following "unequipped" dropdowns as slots
+                // Slot dropdown
                 else if (currentSlotGroup && el.classList.contains('select-select') && getDropdownValue(el) === 'unequipped') {
                     const slotCount = Object.keys(currentSlotGroup.Slots).length + 1;
                     currentSlotGroup.Slots[`Slot ${slotCount}`] = 'unequipped';
                 }
 
-                // Collect dropdowns (non-rack related)
+                // Other dropdowns
                 else if (el.classList.contains('select-select')) {
                     let btn = el.querySelector('button.dropdown-toggle');
                     if (!btn) return;
@@ -358,34 +359,35 @@
                     el.querySelectorAll('ul.dropdown-menu li.select-option a').forEach(a => {
                         options.add(a.textContent.trim());
                     });
+
                     structuredData[label] = {
                         SelectedOption: selected,
                         OtherOptions: Array.from(options)
                     };
                 }
 
-                // Collect text inputs (non-rack related)
+                // Text inputs
                 else if (el.tagName === 'INPUT' && el.type === 'text') {
                     let label = getLabel(el);
                     if (!label) label = el.getAttribute('placeholder') || '';
                     let value = el.value || el.getAttribute('placeholder') || '';
-                    structuredData[label] = {
-                        Value: value
-                    };
+                    structuredData[label] = { Value: value };
                 }
 
-                // Collect checkboxes (non-rack related)
+                // Checkboxes (outside racks)
                 else if (el.tagName === 'INPUT' && el.type === 'checkbox') {
                     let label = getLabel(el);
-                    let checked = el.checked;
-                    structuredData[label] = {
-                        Checked: checked
-                    };
+                    if (!label) return;
+                    // Avoid overwriting rack UPS entries
+                    if (label !== 'Uninterruptible Power Supply') {
+                        structuredData[label] = { Checked: el.checked };
+                    }
                 }
             });
 
             return structuredData;
         }
+
 
 
 
