@@ -366,13 +366,12 @@
     <div id="chatbot">
         <div class="chat-header">
             <span>
-                <strong>OptiGuide AI Assistant</strong>
+                <strong>OptoCPQ AI Assistant</strong>
                 <span
                     style="background-color: #e9c41f; color: #fcf9f9; padding: 6px 6px; margin-left: 8px; border-radius: 4px; font-size: 0.70em;">
                     <strong>Demo</strong>
                 </span>
             </span>
-            <!-- <span><strong>AI Assistant</strong></span> -->
             <button onclick="toggleChatbot()">×</button>
         </div>
         <div id="chatlog" class="chat-log"></div>
@@ -588,6 +587,8 @@
             characterData: true
         });
 
+        let chatHistory = [];
+
         async function handleUserQuery() {
             collectStructuredData();
             const inputElem = document.getElementById("userInput");
@@ -604,24 +605,25 @@
                 </div>`;
             inputElem.value = "";
 
-            // Add typing indicator as a standalone element
+            // Add user message to history
+            chatHistory.push({ role: "user", content: input });
+
+            // Add typing indicator
             const typingId = "typing-" + Date.now();
             chatlog.innerHTML += `
                 <div id="${typingId}" class="typing-indicator-container">
                     <div class="typing-indicator">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+                        <span></span><span></span><span></span>
                     </div>
                 </div>`;
             chatlog.scrollTop = chatlog.scrollHeight;
 
             try {
-                const response = await fetch("https:///chat", {
+                const response = await fetch("/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        userMessage: input,
+                        messages: chatHistory,
                         context: structuredData,
                     }),
                 });
@@ -631,10 +633,14 @@
 
                 const data = await response.json();
 
-                // Format the JSON for better readability
-                let formattedResponse = data.content;
-                formattedResponse = formattedResponse.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-                formattedResponse = formattedResponse.replace(/\n/g, "<br>");
+                let formattedResponse;
+                if (data.type === "json") {
+                    formattedResponse = `<pre>${JSON.stringify(data.content, null, 2)}</pre>`;
+                } else {
+                    formattedResponse = data.content
+                        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                        .replace(/\n/g, "<br>");
+                }
 
                 chatlog.innerHTML += `
                     <div class="chat-message ai">
@@ -644,21 +650,26 @@
                         <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>`;
                 chatlog.scrollTop = chatlog.scrollHeight;
+
+                // Add AI message to history
+                chatHistory.push({ role: "assistant", content: data.content });
+
             } catch (err) {
                 // Remove typing indicator
                 document.getElementById(typingId).remove();
 
                 chatlog.innerHTML += `
-                    <div class="chat-message error">
-                        <div class="bubble">
-                            <span class="sender">Error:</span>
-                            ${err.message}
-                        </div>
-                        <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                    </div>`;
+                <div class="chat-message error">
+                    <div class="bubble">
+                        <span class="sender">Error:</span>
+                        ${err.message}
+                    </div>
+                    <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>`;
                 chatlog.scrollTop = chatlog.scrollHeight;
             }
         }
+
 
         // Initialize the chat
         document.addEventListener("DOMContentLoaded", function () {
