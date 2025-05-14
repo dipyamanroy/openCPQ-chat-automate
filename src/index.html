@@ -577,7 +577,7 @@
             chatlog.scrollTop = chatlog.scrollHeight;
 
             try {
-                const response = await fetch("https://t0md0m3g-3000.inc1.devtunnels.ms/chat", {
+                const response = await fetch("https:///chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -592,12 +592,14 @@
                 const data = await response.json();
                 
                 // Format the JSON for better readability
-                let formattedJson = JSON.stringify(data, null, 2);
-                
+                let formattedResponse = data.content;
+                formattedResponse = formattedResponse.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+                formattedResponse = formattedResponse.replace(/\n/g, "<br>");
+
                 chatlog.innerHTML += `
                     <div class="chat-message ai">
                         <div class="bubble">
-                            <pre>${formattedJson}</pre>
+                            <p>${formattedResponse}</p>
                         </div>
                         <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>`;
