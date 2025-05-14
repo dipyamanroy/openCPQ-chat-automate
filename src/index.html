@@ -369,10 +369,10 @@
     <script>
         let structuredData = {};
         const examplePrompts = [
-            "Can you help me configure a 100G optical channel?",
+            "What are the ways I can get Technical Support?",
             "Show me available Rack Type options.",
-            "What's the power requirement for this setup?",
-            "Suggest a cost-optimized design."
+            "When is the earliest that I get a Hardware Replacement?",
+            "Do I need an Uninterruptible Power Supply?"
         ];
 
         function toggleChatbot() {
@@ -508,7 +508,7 @@
                     }
                 }
             });
-
+            console.log(structuredData);
             return structuredData;
         }
 
