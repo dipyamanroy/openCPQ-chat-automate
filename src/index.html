@@ -28,7 +28,8 @@
             --transition: all 0.3s ease;
         }
 
-        #chatbot, #chatbot * {
+        #chatbot,
+        #chatbot * {
             font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
         }
 
@@ -176,7 +177,7 @@
         }
 
         .chat-message .bubble {
-            padding: 20px ;
+            padding: 20px;
             border-radius: var(--radius-md);
             max-width: 90%;
             font-size: 16px;
@@ -328,9 +329,13 @@
         }
 
         @keyframes typingBounce {
-            0%, 80%, 100% {
+
+            0%,
+            80%,
+            100% {
                 transform: scale(0.6);
             }
+
             40% {
                 transform: scale(1);
             }
@@ -361,10 +366,11 @@
     <div id="chatbot">
         <div class="chat-header">
             <span>
-            <strong>OptiGuide AI Assistant</strong>
-            <span style="background-color: #e9c41f; color: #fcf9f9; padding: 6px 6px; margin-left: 8px; border-radius: 4px; font-size: 0.70em;">
-                <strong>Demo</strong>
-            </span>
+                <strong>OptiGuide AI Assistant</strong>
+                <span
+                    style="background-color: #e9c41f; color: #fcf9f9; padding: 6px 6px; margin-left: 8px; border-radius: 4px; font-size: 0.70em;">
+                    <strong>Demo</strong>
+                </span>
             </span>
             <!-- <span><strong>AI Assistant</strong></span> -->
             <button onclick="toggleChatbot()">×</button>
@@ -411,8 +417,8 @@
                             <div style="text-align:center"><strong>Get Started</strong></div>
                             <div class="example-prompts">
                                 ${examplePrompts.map(text => {
-                                    return `<button onclick="sendExamplePrompt('${text.replace(/'/g, "\\'")}')">${text}</button>`;
-                                }).join('')}
+                    return `<button onclick="sendExamplePrompt('${text.replace(/'/g, "\\'")}')">${text}</button>`;
+                }).join('')}
                             </div>
                         </div>
                         <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
@@ -448,6 +454,15 @@
                 }
                 if (!label) label = el.getAttribute('aria-label') || el.getAttribute('placeholder') || '';
                 return label;
+            }
+
+            // Adding warnings
+            function getWarnings(el) {
+                const parent = el.closest('.labeled-data') || el.parentElement;
+                const warningEls = parent ? parent.querySelectorAll('div.validate-warning') : [];
+                return Array.from(warningEls)
+                    .map(div => div.textContent.trim())
+                    .filter(text => text.length > 0);
             }
 
             const allElements = document.querySelectorAll('div, .select-select, input[type="checkbox"], input[type="text"]');
@@ -494,10 +509,15 @@
                         options.add(a.textContent.trim());
                     });
 
-                    structuredData[label] = {
+                    let entry = {
                         SelectedOption: selected,
                         OtherOptions: Array.from(options)
                     };
+
+                    const warnings = getWarnings(el);
+                    if (warnings.length > 0) entry.Warnings = warnings;
+
+                    structuredData[label] = entry;
                 }
 
                 // Text inputs
@@ -505,22 +525,35 @@
                     let label = getLabel(el);
                     if (!label) label = el.getAttribute('placeholder') || '';
                     let value = el.value || el.getAttribute('placeholder') || '';
-                    structuredData[label] = { Value: value };
+
+                    let entry = { Value: value };
+
+                    const warnings = getWarnings(el);
+                    if (warnings.length > 0) entry.Warnings = warnings;
+
+                    structuredData[label] = entry;
                 }
 
                 // Checkboxes (outside racks)
                 else if (el.tagName === 'INPUT' && el.type === 'checkbox') {
                     let label = getLabel(el);
                     if (!label) return;
-                    // Avoid overwriting rack UPS entries
+
                     if (label !== 'Uninterruptible Power Supply') {
-                        structuredData[label] = { Checked: el.checked };
+                        let entry = { Checked: el.checked };
+
+                        const warnings = getWarnings(el);
+                        if (warnings.length > 0) entry.Warnings = warnings;
+
+                        structuredData[label] = entry;
                     }
                 }
             });
+
             console.log(structuredData);
             return structuredData;
         }
+
 
         document.addEventListener("DOMContentLoaded", collectStructuredData);
         document.addEventListener("change", collectStructuredData);
@@ -562,7 +595,7 @@
             if (!input) return;
 
             const chatlog = document.getElementById("chatlog");
-                            chatlog.innerHTML += `
+            chatlog.innerHTML += `
                 <div class="chat-message user">
                     <div class="bubble">
                         ${input}
@@ -614,7 +647,7 @@
             } catch (err) {
                 // Remove typing indicator
                 document.getElementById(typingId).remove();
-                
+
                 chatlog.innerHTML += `
                     <div class="chat-message error">
                         <div class="bubble">
@@ -628,7 +661,7 @@
         }
 
         // Initialize the chat
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             const chatbot = document.getElementById("chatbot");
             if (chatbot) {
                 chatbot.style.display = "none";
