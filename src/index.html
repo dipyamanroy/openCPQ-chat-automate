@@ -531,12 +531,15 @@
         });
 
         // Add event listener for enter key on input
-        document.getElementById("userInput").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                handleUserQuery();
-            }
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("userInput").addEventListener("keypress", function (event) {
+                if (event.key === "Enter") {
+                    event.preventDefault(); // Prevent newline
+                    handleUserQuery();
+                }
+            });
         });
+
 
         const observer = new MutationObserver(() => {
             clearTimeout(observer.debounceTimeout);
@@ -581,7 +584,7 @@
             chatlog.scrollTop = chatlog.scrollHeight;
 
             try {
-                const response = await fetch("/chat", {
+                const response = await fetch("https:///chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
