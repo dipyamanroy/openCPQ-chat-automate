@@ -668,32 +668,26 @@
         let chatHistory = [];
 
         async function handleUserQuery() {
-            collectStructuredData();
+            collectStructuredData(); // Ensure this is defined
             const inputElem = document.getElementById("userInput");
             const input = inputElem.value.trim();
             if (!input) return;
 
             const chatlog = document.getElementById("chatlog");
             chatlog.innerHTML += `
-                <div class="chat-message user">
-                    <div class="bubble">
-                        ${input}
-                    </div>
-                    <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                </div>`;
+        <div class="chat-message user">
+            <div class="bubble">${input}</div>
+            <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>`;
             inputElem.value = "";
 
-            // Add user message to history
             chatHistory.push({ role: "user", content: input });
 
-            // Add typing indicator
             const typingId = "typing-" + Date.now();
             chatlog.innerHTML += `
-                <div id="${typingId}" class="typing-indicator-container">
-                    <div class="typing-indicator">
-                        <span></span><span></span><span></span>
-                    </div>
-                </div>`;
+        <div id="${typingId}" class="typing-indicator-container">
+            <div class="typing-indicator"><span></span><span></span><span></span></div>
+        </div>`;
             chatlog.scrollTop = chatlog.scrollHeight;
 
             try {
@@ -702,12 +696,21 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         messages: chatHistory,
-                        context: structuredData,
+                        context: structuredData, // Ensure this exists
                     }),
                 });
 
-                // Remove typing indicator
-                document.getElementById(typingId).remove();
+                const typingElem = document.getElementById(typingId);
+                if (typingElem) typingElem.remove();
+
+                const contentType = response.headers.get("content-type") || "";
+
+                if (!response.ok) {
+                    throw new Error(`Couldn't find AI. Contact site administrator.`);
+                } else if (!contentType.includes("application/json")) {
+                    const text = await response.text();
+                    throw new Error("API did not return valid JSON");
+                }
 
                 const data = await response.json();
 
@@ -721,29 +724,30 @@
                 }
 
                 chatlog.innerHTML += `
-                    <div class="chat-message ai">
-                        <div class="bubble">
-                            <p>${formattedResponse}</p>
-                        </div>
-                        <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                    </div>`;
+            <div class="chat-message ai">
+                <div class="bubble"><p>${formattedResponse}</p></div>
+                <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>`;
                 chatlog.scrollTop = chatlog.scrollHeight;
 
-                // Add AI message to history
                 chatHistory.push({ role: "assistant", content: data.content });
 
             } catch (err) {
-                // Remove typing indicator
-                document.getElementById(typingId).remove();
+                const typingElem = document.getElementById(typingId);
+                if (typingElem) typingElem.remove();
+
+                const userFriendlyMessage = err.message.includes("AI")
+                    ? err.message
+                    : "Catastrophic failure. Contact site administrator.";
 
                 chatlog.innerHTML += `
-                <div class="chat-message error">
-                    <div class="bubble">
-                        <span class="sender">Error:</span>
-                        ${err.message}
-                    </div>
-                    <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                </div>`;
+            <div class="chat-message error">
+                <div class="bubble">
+                    <span class="sender">Error:</span>
+                    ${userFriendlyMessage}
+                </div>
+                <div class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>`;
                 chatlog.scrollTop = chatlog.scrollHeight;
             }
         }
