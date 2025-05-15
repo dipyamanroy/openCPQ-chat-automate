@@ -437,11 +437,13 @@
             let currentRackKey = '';
             let currentSlotGroup = null;
 
+            // Helper: Get selected text from dropdown
             function getDropdownValue(selectEl) {
                 const span = selectEl.querySelector('button.dropdown-toggle span');
                 return span ? span.textContent.trim() : '';
             }
 
+            // Helper: Get label text associated with a form element
             function getLabel(el) {
                 let label = '';
                 let parent = el.closest('.labeled-data');
@@ -455,7 +457,7 @@
                 return label;
             }
 
-            // Adding warnings
+            // Helper: Extract any validation warning messages
             function getWarnings(el) {
                 const parent = el.closest('.labeled-data') || el.parentElement;
                 const warningEls = parent ? parent.querySelectorAll('div.validate-warning') : [];
@@ -464,13 +466,13 @@
                     .filter(text => text.length > 0);
             }
 
+            // Main element parsing loop
             const allElements = document.querySelectorAll('div, .select-select, input[type="checkbox"], input[type="text"]');
 
             allElements.forEach(el => {
-                // New Rack
+                // Detect new rack section when "Uninterruptible Power Supply" checkbox appears
                 if (el.tagName === 'INPUT' && el.type === 'checkbox' &&
                     el.closest('.labeled-data')?.previousElementSibling?.textContent.trim() === 'Uninterruptible Power Supply') {
-
                     rackCounter++;
                     currentRackKey = `Rack ${rackCounter}`;
                     structuredData[currentRackKey] = {
@@ -480,7 +482,7 @@
                     currentSlotGroup = null;
                 }
 
-                // New Slot Group
+                // Begin new slot group if Optical Switch is selected
                 else if (el.classList.contains('select-select') && getDropdownValue(el).includes('Optical Switch')) {
                     if (!currentRackKey) return;
                     currentSlotGroup = {
@@ -490,13 +492,13 @@
                     structuredData[currentRackKey].SlotGroups.push(currentSlotGroup);
                 }
 
-                // Slot dropdown
+                // Add "unequipped" slot entry to current group
                 else if (currentSlotGroup && el.classList.contains('select-select') && getDropdownValue(el) === 'unequipped') {
                     const slotCount = Object.keys(currentSlotGroup.Slots).length + 1;
                     currentSlotGroup.Slots[`Slot ${slotCount}`] = 'unequipped';
                 }
 
-                // Other dropdowns
+                // Parse all other dropdown selections
                 else if (el.classList.contains('select-select')) {
                     let btn = el.querySelector('button.dropdown-toggle');
                     if (!btn) return;
@@ -519,7 +521,7 @@
                     structuredData[label] = entry;
                 }
 
-                // Text inputs
+                // Parse text input fields
                 else if (el.tagName === 'INPUT' && el.type === 'text') {
                     let label = getLabel(el);
                     if (!label) label = el.getAttribute('placeholder') || '';
@@ -533,7 +535,7 @@
                     structuredData[label] = entry;
                 }
 
-                // Checkboxes (outside racks)
+                // Parse generic checkbox inputs (excluding UPS, which is handled above)
                 else if (el.tagName === 'INPUT' && el.type === 'checkbox') {
                     let label = getLabel(el);
                     if (!label) return;
@@ -549,9 +551,29 @@
                 }
             });
 
+            // Parse the bill of materials table
+            const bomRows = document.querySelectorAll('tr');
+            structuredData.Price = {};
+
+            bomRows.forEach(row => {
+                const itemEl = row.querySelector('.bom-item');
+                const priceEls = row.querySelectorAll('.bom-price');
+
+                // Only store the second .bom-price (total), not unit price
+                if (itemEl && priceEls.length >= 2) {
+                    const itemName = itemEl.textContent.trim();
+                    const totalPrice = priceEls[1].textContent.trim();
+
+                    if (itemName && itemName !== 'Total') {
+                        structuredData.Price[itemName] = totalPrice;
+                    }
+                }
+            });
+
             console.log(structuredData);
             return structuredData;
         }
+
 
 
         document.addEventListener("DOMContentLoaded", collectStructuredData);
