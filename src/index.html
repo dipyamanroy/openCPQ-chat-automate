@@ -292,7 +292,7 @@
             border-color: var(--primary-color);
         }
 
-        /* Typing indicator - Now a standalone message */
+        /* Typing indicator */
         .typing-indicator-container {
             display: flex;
             align-items: flex-start;
@@ -407,6 +407,30 @@
             }
         }
 
+        // Close chatbot when clicking outside
+        document.addEventListener("click", function (event) {
+            const chatbot = document.getElementById("chatbot");
+            const chatToggle = document.getElementById("chatToggle");
+
+            // If chatbot is visible and click is outside chatbot and not on toggle button
+            if (chatbot.style.display === "flex" &&
+                !chatbot.contains(event.target) &&
+                event.target !== chatToggle) {
+                chatbot.style.display = "none";
+                chatToggle.style.display = "flex";
+            }
+        });
+
+        // Prevent clicks inside chatbot from closing it
+        document.getElementById("chatbot").addEventListener("click", function (event) {
+            event.stopPropagation();
+        });
+
+        // Prevent clicks on toggle button from triggering document click
+        document.getElementById("chatToggle").addEventListener("click", function (event) {
+            event.stopPropagation();
+        });
+
         function showExamplePromptsIfEmpty() {
             const chatlog = document.getElementById("chatlog");
             if (chatlog.innerHTML.trim() === "") {
@@ -437,13 +461,11 @@
             let currentRackKey = '';
             let currentSlotGroup = null;
 
-            // Helper: Get selected text from dropdown
             function getDropdownValue(selectEl) {
                 const span = selectEl.querySelector('button.dropdown-toggle span');
                 return span ? span.textContent.trim() : '';
             }
 
-            // Helper: Get label text associated with a form element
             function getLabel(el) {
                 let label = '';
                 let parent = el.closest('.labeled-data');
@@ -457,7 +479,6 @@
                 return label;
             }
 
-            // Helper: Extract any validation warning messages
             function getWarnings(el) {
                 const parent = el.closest('.labeled-data') || el.parentElement;
                 const warningEls = parent ? parent.querySelectorAll('div.validate-warning') : [];
@@ -466,11 +487,27 @@
                     .filter(text => text.length > 0);
             }
 
-            // Main element parsing loop
+            function getInfos(el) {
+                const parent = el.closest('.labeled-data') || el.parentElement;
+                if (!parent) return [];
+                const infoEls = parent.querySelectorAll('div.validate-info');
+                return Array.from(infoEls)
+                    .map(div => {
+                        // Concatenate all span texts except those with icon classes (like glyphicon)
+                        let textParts = [];
+                        div.querySelectorAll('span').forEach(span => {
+                            if (!span.classList.contains('glyphicon') && span.textContent.trim().length > 0) {
+                                textParts.push(span.textContent.trim());
+                            }
+                        });
+                        return textParts.join(' ');
+                    })
+                    .filter(text => text.length > 0);
+            }
+
             const allElements = document.querySelectorAll('div, .select-select, input[type="checkbox"], input[type="text"]');
 
             allElements.forEach(el => {
-                // Detect new rack section when "Uninterruptible Power Supply" checkbox appears
                 if (el.tagName === 'INPUT' && el.type === 'checkbox' &&
                     el.closest('.labeled-data')?.previousElementSibling?.textContent.trim() === 'Uninterruptible Power Supply') {
                     rackCounter++;
@@ -482,7 +519,6 @@
                     currentSlotGroup = null;
                 }
 
-                // Begin new slot group if Optical Switch is selected
                 else if (el.classList.contains('select-select') && getDropdownValue(el).includes('Optical Switch')) {
                     if (!currentRackKey) return;
                     currentSlotGroup = {
@@ -492,13 +528,11 @@
                     structuredData[currentRackKey].SlotGroups.push(currentSlotGroup);
                 }
 
-                // Add "unequipped" slot entry to current group
                 else if (currentSlotGroup && el.classList.contains('select-select') && getDropdownValue(el) === 'unequipped') {
                     const slotCount = Object.keys(currentSlotGroup.Slots).length + 1;
                     currentSlotGroup.Slots[`Slot ${slotCount}`] = 'unequipped';
                 }
 
-                // Parse all other dropdown selections
                 else if (el.classList.contains('select-select')) {
                     let btn = el.querySelector('button.dropdown-toggle');
                     if (!btn) return;
@@ -518,10 +552,12 @@
                     const warnings = getWarnings(el);
                     if (warnings.length > 0) entry.Warnings = warnings;
 
+                    const infos = getInfos(el);
+                    if (infos.length > 0) entry.Info = infos;
+
                     structuredData[label] = entry;
                 }
 
-                // Parse text input fields
                 else if (el.tagName === 'INPUT' && el.type === 'text') {
                     let label = getLabel(el);
                     if (!label) label = el.getAttribute('placeholder') || '';
@@ -532,10 +568,12 @@
                     const warnings = getWarnings(el);
                     if (warnings.length > 0) entry.Warnings = warnings;
 
+                    const infos = getInfos(el);
+                    if (infos.length > 0) entry.Info = infos;
+
                     structuredData[label] = entry;
                 }
 
-                // Parse generic checkbox inputs (excluding UPS, which is handled above)
                 else if (el.tagName === 'INPUT' && el.type === 'checkbox') {
                     let label = getLabel(el);
                     if (!label) return;
@@ -545,6 +583,9 @@
 
                         const warnings = getWarnings(el);
                         if (warnings.length > 0) entry.Warnings = warnings;
+
+                        const infos = getInfos(el);
+                        if (infos.length > 0) entry.Info = infos;
 
                         structuredData[label] = entry;
                     }
@@ -559,7 +600,6 @@
                 const itemEl = row.querySelector('.bom-item');
                 const priceEls = row.querySelectorAll('.bom-price');
 
-                // Only store the second .bom-price (total), not unit price
                 if (itemEl && priceEls.length >= 2) {
                     const itemName = itemEl.textContent.trim();
                     const totalPrice = priceEls[1].textContent.trim();
@@ -570,10 +610,26 @@
                 }
             });
 
+            //  Collect any standalone validate-info divs outside inputs/dropdowns
+            const otherInfos = [];
+            document.querySelectorAll('div.validate-info').forEach(div => {
+                // If this validate-info is already associated with some element, skip (heuristic: check closest labeled-data)
+                if (div.closest('.labeled-data')) return;
+
+                let textParts = [];
+                div.querySelectorAll('span').forEach(span => {
+                    if (!span.classList.contains('glyphicon') && span.textContent.trim().length > 0) {
+                        textParts.push(span.textContent.trim());
+                    }
+                });
+                let infoText = textParts.join(' ');
+                if (infoText.length > 0) otherInfos.push(infoText);
+            });
+            if (otherInfos.length > 0) structuredData.StandaloneInfo = otherInfos;
+
             console.log(structuredData);
             return structuredData;
         }
-
 
 
         document.addEventListener("DOMContentLoaded", collectStructuredData);
