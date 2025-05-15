@@ -460,6 +460,7 @@
             let rackCounter = 0;
             let currentRackKey = '';
             let currentSlotGroup = null;
+            let slotMode = false;
 
             function getDropdownValue(selectEl) {
                 const span = selectEl.querySelector('button.dropdown-toggle span');
@@ -493,7 +494,6 @@
                 const infoEls = parent.querySelectorAll('div.validate-info');
                 return Array.from(infoEls)
                     .map(div => {
-                        // Concatenate all span texts except those with icon classes (like glyphicon)
                         let textParts = [];
                         div.querySelectorAll('span').forEach(span => {
                             if (!span.classList.contains('glyphicon') && span.textContent.trim().length > 0) {
@@ -517,6 +517,7 @@
                         SlotGroups: []
                     };
                     currentSlotGroup = null;
+                    slotMode = false;
                 }
 
                 else if (el.classList.contains('select-select') && getDropdownValue(el).includes('Optical Switch')) {
@@ -526,31 +527,36 @@
                         Slots: {}
                     };
                     structuredData[currentRackKey].SlotGroups.push(currentSlotGroup);
+                    slotMode = true; // Start tracking slot dropdowns
                 }
 
-                else if (currentSlotGroup && el.classList.contains('select-select')) {
+                else if (slotMode && el.classList.contains('select-select')) {
                     const dropdownValue = getDropdownValue(el);
-                    const slotCount = Object.keys(currentSlotGroup.Slots).length + 1;
-
                     const options = new Set();
                     el.querySelectorAll('ul.dropdown-menu li.select-option a').forEach(a => {
                         options.add(a.textContent.trim());
                     });
 
-                    let slotEntry = {
-                        SelectedOption: dropdownValue,
-                        OtherOptions: Array.from(options)
-                    };
+                    const isLikelySlot = options.has('unequipped') || dropdownValue === 'unequipped';
+                    if (!isLikelySlot) {
+                        slotMode = false; // End slot tracking
+                    } else if (currentSlotGroup) {
+                        const slotCount = Object.keys(currentSlotGroup.Slots).length + 1;
 
-                    const warnings = getWarnings(el);
-                    if (warnings.length > 0) slotEntry.Warnings = warnings;
+                        const slotEntry = {
+                            SelectedOption: dropdownValue,
+                            OtherOptions: Array.from(options)
+                        };
 
-                    const infos = getInfos(el);
-                    if (infos.length > 0) slotEntry.Info = infos;
+                        const warnings = getWarnings(el);
+                        if (warnings.length > 0) slotEntry.Warnings = warnings;
 
-                    currentSlotGroup.Slots[`Slot ${slotCount}`] = slotEntry;
+                        const infos = getInfos(el);
+                        if (infos.length > 0) slotEntry.Info = infos;
+
+                        currentSlotGroup.Slots[`Slot ${slotCount}`] = slotEntry;
+                    }
                 }
-
 
                 else if (el.classList.contains('select-select')) {
                     let btn = el.querySelector('button.dropdown-toggle');
@@ -629,10 +635,9 @@
                 }
             });
 
-            //  Collect any standalone validate-info divs outside inputs/dropdowns
+            // Collect standalone validate-info divs
             const otherInfos = [];
             document.querySelectorAll('div.validate-info').forEach(div => {
-                // If this validate-info is already associated with some element, skip (heuristic: check closest labeled-data)
                 if (div.closest('.labeled-data')) return;
 
                 let textParts = [];
