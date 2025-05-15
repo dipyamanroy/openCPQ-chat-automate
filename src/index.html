@@ -528,10 +528,29 @@
                     structuredData[currentRackKey].SlotGroups.push(currentSlotGroup);
                 }
 
-                else if (currentSlotGroup && el.classList.contains('select-select') && getDropdownValue(el) === 'unequipped') {
+                else if (currentSlotGroup && el.classList.contains('select-select')) {
+                    const dropdownValue = getDropdownValue(el);
                     const slotCount = Object.keys(currentSlotGroup.Slots).length + 1;
-                    currentSlotGroup.Slots[`Slot ${slotCount}`] = 'unequipped';
+
+                    const options = new Set();
+                    el.querySelectorAll('ul.dropdown-menu li.select-option a').forEach(a => {
+                        options.add(a.textContent.trim());
+                    });
+
+                    let slotEntry = {
+                        SelectedOption: dropdownValue,
+                        OtherOptions: Array.from(options)
+                    };
+
+                    const warnings = getWarnings(el);
+                    if (warnings.length > 0) slotEntry.Warnings = warnings;
+
+                    const infos = getInfos(el);
+                    if (infos.length > 0) slotEntry.Info = infos;
+
+                    currentSlotGroup.Slots[`Slot ${slotCount}`] = slotEntry;
                 }
+
 
                 else if (el.classList.contains('select-select')) {
                     let btn = el.querySelector('button.dropdown-toggle');
