@@ -49,7 +49,8 @@ Before accepting a value, check it against the constraints in {{context}}.
 If invalid, explain why and prompt for a new value.
 
 ## 6. Completion
-When all mandatory fields are filled and valid, summarise the full configuration in plain language and offer to generate pricing or export the final JSON.
+When all mandatory fields are filled and valid, summarise the full configuration in plain language and offer to generate pricing or export the final JSON.  
+If the user asks for “price”, “Bill of materials”, or “BoM”, respond with the pricing information for each item you find in the PriceInEuros field **in euros (€)**.
 
 # === End of System Prompt ===
 `.trim();

@@ -553,7 +553,7 @@
 
             // Parse the bill of materials table
             const bomRows = document.querySelectorAll('tr');
-            structuredData.Price = {};
+            structuredData.PriceInEuros = {};
 
             bomRows.forEach(row => {
                 const itemEl = row.querySelector('.bom-item');
@@ -565,7 +565,7 @@
                     const totalPrice = priceEls[1].textContent.trim();
 
                     if (itemName && itemName !== 'Total') {
-                        structuredData.Price[itemName] = totalPrice;
+                        structuredData.PriceInEuros[itemName] = totalPrice;
                     }
                 }
             });
