@@ -522,13 +522,33 @@
 
                 else if (el.classList.contains('select-select') && getDropdownValue(el).includes('Optical Switch')) {
                     if (!currentRackKey) return;
+
+                    const options = new Set();
+                    el.querySelectorAll('ul.dropdown-menu li.select-option a').forEach(a => {
+                        options.add(a.textContent.trim());
+                    });
+                    const dropdownValue = getDropdownValue(el);
+
+                    const productEntry = {
+                        SelectedOption: dropdownValue,
+                        OtherOptions: Array.from(options)
+                    };
+
+                    const warnings = getWarnings(el);
+                    if (warnings.length > 0) productEntry.Warnings = warnings;
+
+                    const infos = getInfos(el);
+                    if (infos.length > 0) productEntry.Info = infos;
+
                     currentSlotGroup = {
-                        Product: getDropdownValue(el),
+                        Product: productEntry,
                         Slots: {}
                     };
+
                     structuredData[currentRackKey].SlotGroups.push(currentSlotGroup);
                     slotMode = true; // Start tracking slot dropdowns
                 }
+
 
                 else if (slotMode && el.classList.contains('select-select')) {
                     const dropdownValue = getDropdownValue(el);
